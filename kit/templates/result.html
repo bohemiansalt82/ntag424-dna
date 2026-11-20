@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GYEOL 정품 인증</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<style>
+  :root{--ink:#14161f;--paper:#f4efe6;--cobalt:#1f3bd6;--amber:#f2a516;--red:#d7263d;--muted:#6b6a72}
+  *{box-sizing:border-box;margin:0}
+  body{font-family:Pretendard,system-ui,sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;display:flex;flex-direction:column}
+  header{padding:18px 22px;display:flex;justify-content:space-between;align-items:center;font-weight:800;letter-spacing:.18em}
+  header small{font-weight:500;letter-spacing:0;color:var(--muted);font-size:12px}
+  .hero{margin:0 16px;border-radius:28px;padding:34px 24px 30px;color:#fff;position:relative;overflow:hidden}
+  .genuine{background:var(--cobalt)}
+  .genuine::after{content:"";position:absolute;inset:-40%;background:conic-gradient(from 90deg,#ffd6f5,#c8f7ff,#d9ffd6,#fff1c2,#ffd6f5);opacity:.28;mix-blend-mode:screen;animation:spin 9s linear infinite}
+  .replay{background:var(--amber);color:var(--ink)}
+  .forged,.unknown{background:var(--red)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .badge{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center;font-size:32px;margin-bottom:22px;position:relative;z-index:1}
+  .replay .badge{background:rgba(0,0,0,.1)}
+  h1{font-size:28px;font-weight:800;line-height:1.25;position:relative;z-index:1}
+  .hero p{margin-top:10px;font-size:15px;opacity:.88;line-height:1.5;position:relative;z-index:1}
+  .card{margin:16px;background:#fff;border-radius:22px;padding:20px}
+  .card h2{font-size:20px;font-weight:800}
+  .card .by{color:var(--muted);margin-top:4px;font-size:14px}
+  dl{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;margin-top:18px;font-size:14px}
+  dt{color:var(--muted)} dd{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+  .btn{display:block;margin:4px 16px 16px;padding:17px;border-radius:16px;background:var(--ink);color:#fff;text-align:center;font-weight:700;text-decoration:none}
+  footer{margin-top:auto;padding:20px;text-align:center;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<header>GYEOL <small>정품 인증</small></header>
+{% set t = r.tag %}
+{% if r.status == 'genuine' %}
+  <section class="hero genuine"><div class="badge">✓</div>
+    <h1>정품 인증이<br>완료되었습니다</h1>
+    <p>이 제품의 NFC 칩 서명이 확인되었습니다.<br>{{ t.scans }}번째 인증입니다.</p></section>
+{% elif r.status == 'replay' %}
+  <section class="hero replay"><div class="badge">!</div>
+    <h1>이미 사용된<br>인증 링크입니다</h1>
+    <p>복사된 URL로 접속한 것으로 보입니다.<br>제품의 태그에 폰을 직접 대서 다시 확인해 주세요.</p></section>
+{% elif r.status == 'unknown' %}
+  <section class="hero unknown"><div class="badge">?</div>
+    <h1>등록되지 않은<br>제품입니다</h1>
+    <p>고객센터로 문의해 주세요.</p></section>
+{% else %}
+  <section class="hero forged"><div class="badge">✕</div>
+    <h1>정품으로 확인되지<br>않았습니다</h1>
+    <p>태그 서명이 올바르지 않습니다.<br>구매처와 고객센터에 문의해 주세요.</p></section>
+{% endif %}
+{% if t and r.status == 'genuine' %}
+  <section class="card">
+    <h2>{{ t.name }}</h2><div class="by">{{ t.artist }}{% if t.category %} · {{ t.category }}{% endif %}</div>
+    <dl>
+      {% if t.made %}<dt>제작</dt><dd>{{ t.made }}</dd>{% endif %}
+      {% if t.serial %}<dt>일련번호</dt><dd>{{ t.serial }}</dd>{% endif %}
+      <dt>칩 ID</dt><dd>{{ t.uid }}</dd>
+      <dt>인증 횟수</dt><dd>{{ t.scans }}회</dd>
+    </dl>
+  </section>
+  <a class="btn" href="#">디지털 소유 증명서 받기</a>
+{% endif %}
+<footer>NTAG 424 DNA · AES-128 SUN 인증</footer>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GYEOL NFC 정품 인증 프로토타입</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap">
+<style>
+/* VOICE 차분한 신뢰 · IDEA 나전 손거울 라벨을 폰으로 탭하는 순간 · PICTURE 폰 프레임 안의 실제 인증 흐름
+   COLOUR 청화 코발트 + 자개 무지개빛 + 한지색 바탕 · TYPE Noto Sans KR · LAYOUT 폰 왼쪽, 검증 로그 오른쪽, 모바일은 세로 */
+:root{--ink:#14161f;--paper:#f4efe6;--cobalt:#1f3bd6;--amber:#f2a516;--red:#d7263d;--muted:#6b6a72;--line:#2a2d3a;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',system-ui,sans-serif;background:var(--paper);color:var(--ink);min-height:100vh}
+.top{display:flex;justify-content:space-between;align-items:baseline;max-width:1080px;margin:0 auto;padding:28px 24px 8px}
+.top b{letter-spacing:.2em;font-size:15px}
+.top span{color:var(--muted);font-size:13px}
+.stage{max-width:1080px;margin:0 auto;padding:16px 24px 48px;display:grid;grid-template-columns:400px 1fr;gap:40px;align-items:start}
+@media(max-width:900px){.stage{grid-template-columns:1fr}.phone-col{justify-self:center}}
+
+/* ---------- 폰 ---------- */
+.phone{width:372px;height:780px;border-radius:56px;background:#0d0e13;padding:12px;box-shadow:0 30px 60px -20px rgba(20,22,31,.45),inset 0 0 0 2px #2b2d36;position:relative}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media(max-width:420px){.phone{transform:scale(.88);transform-origin:top center;margin-bottom:-90px}}
+.screen{width:100%;height:100%;border-radius:44px;overflow:hidden;position:relative;background:var(--paper)}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:112px;height:32px;border-radius:20px;background:#000;z-index:30}
+.status{height:52px;display:flex;justify-content:space-between;align-items:center;padding:6px 30px 0;font-size:14px;font-weight:700;position:relative;z-index:20}
+.scr{position:absolute;inset:0;padding-top:52px;display:flex;flex-direction:column;transition:opacity .35s, transform .35s}
+.scr.hide{opacity:0;pointer-events:none;transform:translateY(12px)}
+.brand{padding:12px 24px;display:flex;justify-content:space-between;align-items:center;font-weight:800;letter-spacing:.2em;font-size:15px}
+.brand small{letter-spacing:0;font-weight:500;color:var(--muted);font-size:12px}
+
+/* 대기 화면 */
+.product{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+.mirror-wrap{position:relative;display:flex;flex-direction:column;align-items:center}
+.mirror{width:190px;height:190px;border-radius:50%;background:#16161b;padding:14px;box-shadow:0 20px 40px -10px rgba(0,0,0,.35)}
+.mirror i{display:block;width:100%;height:100%;border-radius:50%;background:conic-gradient(from 200deg,#ffd9f2,#c4eeff,#e0ffd9,#fff0c4,#f1d4ff,#ffd9f2);position:relative;overflow:hidden}
+.mirror i::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.8),transparent 45%)}
+.handle{width:38px;height:120px;background:#16161b;border-radius:0 0 18px 18px;margin-top:-6px;position:relative}
+.tagpt{position:absolute;left:50%;top:62px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--cobalt);box-shadow:0 0 0 3px rgba(255,255,255,.9)}
+.tagpt::before,.tagpt::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--cobalt);animation:ring 2s ease-out infinite}
+.tagpt::after{animation-delay:1s}
+@keyframes ring{to{inset:-34px;opacity:0}}
+.guide{text-align:center;padding:0 32px 40px}
+.guide h2{font-size:22px;font-weight:800;line-height:1.35}
+.guide p{color:var(--muted);font-size:14px;margin-top:8px;line-height:1.5}
+
+/* NFC 시트 */
+.dim{position:absolute;inset:0;background:rgba(10,10,15,.4);z-index:40;opacity:0;pointer-events:none;transition:opacity .3s}
+.dim.on{opacity:1}
+.sheet{position:absolute;left:8px;right:8px;bottom:8px;height:330px;border-radius:40px;background:#fff;z-index:41;transform:translateY(110%);transition:transform .4s cubic-bezier(.2,.9,.3,1);display:flex;flex-direction:column;align-items:center;padding:30px 24px}
+.sheet.on{transform:none}
+.sheet h3{font-size:22px;font-weight:700;color:#9a9aa2}
+.nfc-ico{width:96px;height:96px;margin:30px 0 22px;border-radius:50%;display:grid;place-items:center;background:#eef1ff;color:var(--cobalt);font-size:40px;transition:all .3s}
+.nfc-ico.done{background:var(--cobalt);color:#fff}
+.sheet p{font-size:16px;font-weight:600}
+
+/* 주소창 */
+.addr{margin:6px 14px 0;height:36px;border-radius:12px;background:#e7e1d5;display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;color:#4b4a52;white-space:nowrap;overflow:hidden;position:relative}
+.addr .bar{position:absolute;left:0;bottom:0;height:2px;background:var(--cobalt);width:0;transition:width .7s ease}
+
+/* 결과 화면 */
+.res-scroll{flex:1;overflow-y:auto;padding-bottom:20px}
+.hero{margin:12px 14px 0;border-radius:28px;padding:30px 22px 26px;color:#fff;position:relative;overflow:hidden}
+.hero.genuine{background:var(--cobalt)}
+.hero.genuine::after{content:"";position:absolute;inset:-40%;background:conic-gradient(from 90deg,#ffd6f5,#c8f7ff,#d9ffd6,#fff1c2,#ffd6f5);opacity:.16;mix-blend-mode:screen;animation:spin 9s linear infinite}
+.hero.replay{background:var(--amber);color:var(--ink)}
+.hero.forged{background:var(--red)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.badge{width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:30px;font-weight:800;margin-bottom:20px;position:relative;z-index:1}
+.hero.replay .badge{background:rgba(0,0,0,.1)}
+.hero h1{font-size:27px;font-weight:800;line-height:1.28;position:relative;z-index:1}
+.hero p{margin-top:10px;font-size:14px;opacity:.9;line-height:1.55;position:relative;z-index:1}
+.card{margin:12px 14px;background:#fff;border-radius:22px;padding:20px}
+.card h2{font-size:19px;font-weight:800}
+.card .by{color:var(--muted);margin-top:3px;font-size:13px}
+.card dl{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;margin-top:16px;font-size:13px}
+.card dt{color:var(--muted)}.card dd{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.btn{display:block;margin:4px 14px 0;padding:16px;border-radius:16px;background:var(--ink);color:#fff;text-align:center;font-weight:700;font-size:15px}
+.foot{text-align:center;color:var(--muted);font-size:11px;padding:16px}
+
+/* ---------- 컨트롤 ---------- */
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px;width:372px}
+@media(max-width:420px){.stage{padding:12px 14px 40px}.phone-col{width:100%;display:flex;flex-direction:column;align-items:center}.controls{width:100%}}
+.controls button{font:inherit;font-size:14px;font-weight:700;border:0;border-radius:14px;padding:14px 10px;cursor:pointer;background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1.5px #d9d2c4;transition:transform .1s}
+.controls button:active{transform:scale(.97)}
+.controls button.primary{grid-column:1/-1;background:var(--cobalt);color:#fff;box-shadow:none;padding:17px;font-size:16px}
+.controls button:disabled{opacity:.4;cursor:default}
+
+/* ---------- 개발자 패널 ---------- */
+.panel{background:var(--ink);color:#e6e6ec;border-radius:28px;padding:26px;font-size:13px}
+.panel h4{font-size:13px;color:#8b8d9c;font-weight:700;margin:22px 0 10px}
+.panel h4:first-child{margin-top:0}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-family:var(--mono);font-size:12.5px}
+.kv span:nth-child(odd){color:#8b8d9c;font-family:'Noto Sans KR',system-ui,sans-serif}
+.url{font-family:var(--mono);font-size:12px;line-height:1.7;background:#0b0c11;border-radius:12px;padding:12px 14px;word-break:break-all;color:#9da0b0;min-height:46px}
+.url .p{color:#8fb0ff}.url .m{color:#ffc56b}
+ol.steps{list-style:none;display:flex;flex-direction:column;gap:8px}
+ol.steps li{background:#1c1f2b;border-radius:12px;padding:11px 14px;display:grid;grid-template-columns:22px 1fr;gap:4px 10px;opacity:.35;transition:opacity .3s}
+ol.steps li.on{opacity:1}
+ol.steps .ic{font-weight:800;grid-row:span 2}
+ol.steps .ok{color:#7ee2a8}.ol .bad,ol.steps .bad{color:#ff7a8a}.ol .warn,ol.steps .warn{color:#ffc56b}
+ol.steps b{font-weight:700}
+ol.steps small{font-family:var(--mono);color:#9da0b0;font-size:11.5px;word-break:break-all}
+.selftest{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);color:#8b8d9c;font-size:12px}
+.selftest b{color:#7ee2a8}
+.links{display:flex;flex-direction:column;gap:6px;margin-top:10px}.links a{color:#8fb0ff;font-size:13px;text-decoration:none}.links a.off{opacity:.35;pointer-events:none}
+.note{color:#8b8d9c;font-size:12px;line-height:1.6;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="top"><b>GYEOL</b><span>NFC 정품 인증 프로토타입 · NTAG 424 DNA</span></div>
+
+<main class="stage">
+  <div class="phone-col">
+    <div class="phone"><div class="screen" id="screen">
+      <div class="island"></div>
+      <div class="status"><span id="clock">9:41</span><span style="letter-spacing:2px">▂▄▆ ▮</span></div>
+
+      <!-- 대기 화면 -->
+      <section class="scr" id="s-idle">
+        <div class="brand">GYEOL <small>나전칠기 · 김선애</small></div>
+        <div class="product"><div class="mirror-wrap">
+          <div class="mirror"><i></i></div>
+          <div class="handle"><div class="tagpt"></div></div>
+        </div></div>
+        <div class="guide"><h2>손잡이의 NFC 태그에<br>휴대폰을 대 주세요</h2><p>정품 여부와 제작 정보를 확인할 수 있습니다.</p></div>
+      </section>
+
+      <!-- 결과 화면 -->
+      <section class="scr hide" id="s-result">
+        <div class="addr"><svg width="11" height="13" viewBox="0 0 11 13" aria-hidden="true"><rect x="1" y="5.5" width="9" height="7" rx="1.5" fill="#4b4a52"/><path d="M3 5.5V4a2.5 2.5 0 0 1 5 0v1.5" stroke="#4b4a52" stroke-width="1.4" fill="none"/></svg><span id="addr-text">bohemiansalt82.github.io</span><div class="bar" id="addr-bar"></div></div>
+        <div class="res-scroll" id="result"></div>
+      </section>
+
+      <div class="dim" id="dim"></div>
+      <div class="sheet" id="sheet"><h3>스캔 준비 완료</h3><div class="nfc-ico" id="nfc-ico">))))</div><p id="sheet-msg">iPhone을 태그 근처에 대십시오</p></div>
+    </div></div>
+
+    <div class="controls">
+      <button class="primary" id="b-tap">태그에 폰 대기</button>
+      <button id="b-replay" disabled>예전 URL 다시 열기</button>
+      <button id="b-clone">복제 칩 탭하기</button>
+      <button id="b-home">처음 화면</button>
+      <button id="b-reset">초기화 (새 칩 발급)</button>
+    </div>
+  </div>
+
+  <aside class="panel">
+    <h4>칩 (NTAG 424 DNA)</h4>
+    <div class="kv">
+      <span>UID</span><span id="d-uid">-</span>
+      <span>읽기 카운터</span><span id="d-ctr">0</span>
+      <span>K1 (공통)</span><span id="d-k1">-</span>
+      <span>K2 (칩 전용)</span><span id="d-k2">-</span>
+    </div>
+    <p class="note">마스터 키에서 파생된 키입니다. 실제 키는 칩 안에만 있고 외부로 읽을 수 없습니다.</p>
+
+    <h4>태그가 연 URL</h4>
+    <div class="url" id="d-url">아직 탭하지 않았습니다</div>
+    <div class="links"><a id="d-open" class="off" href="#" target="_blank">이 URL을 개발자 검증 페이지에서 열기 →</a><a href="v/?p=EF963FF7828658A599F3041510671E88&m=94EED9EE65337086&demo=an12196" target="_blank">NXP 공식 예제 URL 검증해 보기 →</a></div>
+
+    <h4>서버 검증 단계</h4>
+    <ol class="steps" id="steps"></ol>
+
+    <h4>서버 DB</h4>
+    <div class="kv">
+      <span>마지막 카운터</span><span id="d-last">0</span>
+      <span>인증 횟수</span><span id="d-scans">0</span>
+    </div>
+
+    <div class="selftest" id="selftest">암호 모듈 자체 검사 중…</div>
+  </aside>
+</main>
+
+<script src="js/ntag424.js"></script>
+<script>
+
+// ---------- 시뮬레이션 상태 ----------
+const PRODUCT = { name: "나전 손거울", artist: "김선애", category: "나전칠기", made: "2026 · 통영", serial: "GY-0001" };
+const BASE = "https://bohemiansalt82.github.io/ntag424-dna/v/";
+let master, chip, db, prevUrl, busy = false;
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function reset() {
+  master = crypto.getRandomValues(new Uint8Array(16));
+  try { localStorage.setItem("ntag_sim_master", hex(master)); } catch {}
+  const uid = cat([0x04], crypto.getRandomValues(new Uint8Array(6)));
+  chip = { uid, ctr: 0, keys: await deriveKeys(master, uid) };   // provision.py 가 칩에 넣는 키
+  db = { uid: hex(uid), last: 0, scans: 0 };                    // provision.py 가 DB에 등록
+  prevUrl = null;
+  $("b-replay").disabled = true;
+  $("d-url").textContent = "아직 탭하지 않았습니다"; $("d-open").classList.add("off");
+  $("steps").innerHTML = "";
+  showIdle(); paint();
+}
+function paint() {
+  $("d-uid").textContent = hex(chip.uid); $("d-ctr").textContent = chip.ctr;
+  $("d-k1").textContent = hex(chip.keys.k1).slice(0, 12) + "…"; $("d-k2").textContent = hex(chip.keys.k2).slice(0, 12) + "…";
+  $("d-last").textContent = db.last; $("d-scans").textContent = db.scans;
+}
+// 칩: 탭할 때마다 카운터 +1, 새 PICC·MAC 생성
+async function chipTap(c) {
+  c.ctr++;
+  const p = hex(await encPicc(c.keys.k1, c.uid, c.ctr)), m = hex(await sdmMac(c.keys.k2, c.uid, c.ctr));
+  return { url: `${BASE}?p=${p}&m=${m}`, p, m };
+}
+// 서버: server.py check() 와 같은 순서
+async function serverVerify(p, m, log) {
+  const sharedK1 = (await deriveKeys(master, new Uint8Array(7))).k1;
+  const d = await decPicc(sharedK1, unhex(p));
+  if (!d) { await log("bad", "PICC 복호화 실패", "공통 키 K1로 풀리지 않음"); return { status: "forged" }; }
+  await log("ok", "PICC 복호화 (K1)", `UID ${hex(d.uid)} · 카운터 ${d.ctr}`);
+  const k2 = (await deriveKeys(master, d.uid)).k2;
+  const exp = hex(await sdmMac(k2, d.uid, d.ctr));
+  if (exp !== m) { await log("bad", "CMAC 서명 불일치", `기대 ${exp}\n받음 ${m}`); return { status: "forged" }; }
+  await log("ok", "CMAC 서명 일치 (UID별 K2)", `${exp}`);
+  if (hex(d.uid) !== db.uid) { await log("bad", "미등록 UID", ""); return { status: "forged" }; }
+  if (d.ctr <= db.last) { await log("warn", "카운터 재사용 감지", `받은 값 ${d.ctr} ≤ 마지막 ${db.last} → 복사된 URL`); return { status: "replay" }; }
+  db.last = d.ctr; db.scans++;
+  await log("ok", "카운터 증가 확인", `${d.ctr} > 이전 값 → DB 갱신`);
+  return { status: "genuine" };
+}
+
+// ---------- 화면 ----------
+function showIdle() { $("s-idle").classList.remove("hide"); $("s-result").classList.add("hide"); }
+async function nfcSheet() {
+  $("dim").classList.add("on"); $("sheet").classList.add("on");
+  $("sheet").querySelector("h3").textContent = "스캔 준비 완료"; $("sheet-msg").textContent = "iPhone을 태그 근처에 대십시오";
+  $("nfc-ico").classList.remove("done"); $("nfc-ico").textContent = "))))";
+  await sleep(900);
+  $("sheet-msg").textContent = "읽는 중…";
+  await sleep(600);
+  $("nfc-ico").classList.add("done"); $("nfc-ico").textContent = "✓"; $("sheet-msg").textContent = "완료";
+  await sleep(500);
+  $("dim").classList.remove("on"); $("sheet").classList.remove("on");
+}
+function showUrl(u) {
+  $("d-url").innerHTML = `${BASE}?p=<span class="p">${u.p}</span>&amp;m=<span class="m">${u.m}</span>`;
+  $("d-open").href = `v/?p=${u.p}&m=${u.m}&sim=1`; $("d-open").classList.remove("off");
+}
+async function openPage(u) {
+  $("s-idle").classList.add("hide"); $("s-result").classList.remove("hide");
+  $("result").innerHTML = "";
+  $("addr-text").textContent = u.url.replace("https://", "");
+  const bar = $("addr-bar"); bar.style.transition = "none"; bar.style.width = "0"; bar.offsetWidth; bar.style.transition = ""; bar.style.width = "100%";
+  $("steps").innerHTML = "";
+  const log = async (kind, title, detail) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="ic ${kind}">${kind === "ok" ? "✓" : kind === "warn" ? "!" : "✕"}</span><b></b><small></small>`;
+    li.querySelector("b").textContent = title; li.querySelector("small").textContent = detail;
+    $("steps").appendChild(li); await sleep(30); li.classList.add("on"); await sleep(380);
+  };
+  const r = await serverVerify(u.p, u.m, log);
+  await sleep(150); bar.style.width = "0";
+  render(r.status); paint();
+}
+function render(status) {
+  const T = {
+    genuine: ["✓", "정품 인증이<br>완료되었습니다", `이 제품의 NFC 칩 서명이 확인되었습니다.<br>${db.scans}번째 인증입니다.`],
+    replay: ["!", "이미 사용된<br>인증 링크입니다", "복사된 URL로 접속한 것으로 보입니다.<br>제품의 태그에 폰을 직접 대서 다시 확인해 주세요."],
+    forged: ["✕", "정품으로 확인되지<br>않았습니다", "태그 서명이 올바르지 않습니다.<br>구매처와 고객센터에 문의해 주세요."]
+  }[status];
+  let html = `<section class="hero ${status}"><div class="badge">${T[0]}</div><h1>${T[1]}</h1><p>${T[2]}</p></section>`;
+  if (status === "genuine") html += `<section class="card"><h2>${PRODUCT.name}</h2><div class="by">${PRODUCT.artist} · ${PRODUCT.category}</div>
+    <dl><dt>제작</dt><dd>${PRODUCT.made}</dd><dt>일련번호</dt><dd>${PRODUCT.serial}</dd><dt>칩 ID</dt><dd>${db.uid}</dd><dt>인증 횟수</dt><dd>${db.scans}회</dd></dl></section>
+    <div class="btn">디지털 소유 증명서 받기</div>`;
+  html += `<div class="foot">NTAG 424 DNA · AES-128 SUN 인증</div>`;
+  $("result").innerHTML = html;
+}
+
+async function guard(fn) { if (busy) return; busy = true; try { await fn(); } finally { busy = false; } }
+$("b-tap").onclick = () => guard(async () => {
+  showIdle(); await sleep(150);
+  await nfcSheet();
+  const u = await chipTap(chip); paint(); showUrl(u);
+  await openPage(u);
+  prevUrl = u; $("b-replay").disabled = false;
+});
+$("b-replay").onclick = () => guard(async () => { if (!prevUrl) return; showUrl(prevUrl); await openPage(prevUrl); });
+$("b-clone").onclick = () => guard(async () => {
+  // 복제 칩: UID는 똑같이 베꼈지만 비밀 키는 모름 → 다른 키로 서명
+  const fake = { uid: chip.uid, ctr: chip.ctr + 50, keys: await deriveKeys(crypto.getRandomValues(new Uint8Array(16)), chip.uid) };
+  showIdle(); await sleep(150); await nfcSheet();
+  const u = await chipTap(fake); showUrl(u); await openPage(u);
+});
+$("b-home").onclick = () => { if (!busy) showIdle(); };
+$("b-reset").onclick = () => guard(reset);
+
+(async () => {
+  const ok = await selfTest();
+  $("selftest").innerHTML = ok ? "암호 모듈 자체 검사: <b>NXP AN12196 테스트 벡터 통과</b> · Python 발급 프로그램과 같은 알고리즘" : "⚠ 암호 모듈 자체 검사 실패";
+  const d = new Date(); $("clock").textContent = `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+  await reset();
+})();
+</script>
+</body>
+</html>

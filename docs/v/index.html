@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GYEOL 정품 인증 · 개발자 모드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+<style>
+:root{--ink:#14161f;--paper:#f4efe6;--cobalt:#1f3bd6;--amber:#f2a516;--red:#d7263d;--muted:#6b6a72;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0;min-width:0}
+body{font-family:'Noto Sans KR',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:15px;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:0 14px 48px}
+header{display:flex;justify-content:space-between;align-items:center;padding:18px 6px}
+header b{letter-spacing:.2em}
+header a{font-size:13px;color:var(--muted)}
+.hero{border-radius:26px;padding:28px 22px;color:#fff;background:#8b8d9c}
+.hero.genuine{background:var(--cobalt)}.hero.replay{background:var(--amber);color:var(--ink)}.hero.forged{background:var(--red)}.hero.nokey,.hero.empty{background:var(--ink)}
+.badge{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:26px;font-weight:800;margin-bottom:16px}
+.hero h1{font-size:26px;line-height:1.3;font-weight:800}
+.hero p{margin-top:8px;opacity:.9;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.chip{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,.18);border-radius:8px;padding:4px 8px}
+.hero.replay .chip{background:rgba(0,0,0,.1)}
+section.box{background:#fff;border-radius:22px;padding:18px;margin-top:14px}
+section.box h2{font-size:16px;font-weight:800;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.log{background:var(--ink);color:#e6e6ec;border-radius:22px;padding:18px;margin-top:14px}
+.log h2{font-size:16px;font-weight:800;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.step{background:#1c1f2b;border-radius:14px;padding:14px;margin-top:10px}
+.step .t{display:flex;gap:10px;align-items:baseline;font-weight:700}
+.step .n{font-family:var(--mono);color:#8b8d9c;font-size:12px}
+.step .s{margin-left:auto;font-weight:800}
+.ok{color:#7ee2a8}.bad{color:#ff7a8a}.warn{color:#ffc56b}
+.row{display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr);gap:10px;margin-top:8px;font-size:12.5px}
+.row span:first-child{color:#9da0b0}
+.row code{font-family:var(--mono);word-break:break-all;color:#e6e6ec}
+.step .note{color:#9da0b0;font-size:12.5px;margin-top:8px}
+@media(max-width:520px){.row{grid-template-columns:1fr;gap:2px}}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
+input[type=text],textarea{width:100%;font-family:var(--mono);font-size:16px;padding:12px;border-radius:12px;border:1.5px solid #d9d2c4;background:#fbf9f5}
+textarea{min-height:76px;resize:vertical}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg label{margin:0;display:flex;align-items:center;gap:6px;background:#f4efe6;border-radius:10px;padding:10px 12px;color:var(--ink);font-size:14px;cursor:pointer}
+button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 16px;cursor:pointer;background:var(--ink);color:#fff;min-height:44px}
+button.ghost{background:transparent;color:inherit;box-shadow:inset 0 0 0 1.5px currentColor;padding:6px 12px;min-height:34px;font-size:13px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.hint{font-size:12.5px;color:var(--muted);margin-top:8px}
+details summary{cursor:pointer;font-weight:800;font-size:16px;list-style:none}
+details summary::after{content:" ▾";color:var(--muted)}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><b>GYEOL</b><a href="../">시뮬레이터 →</a></header>
+
+  <div class="hero empty" id="hero"><div class="badge" id="h-badge">…</div><h1 id="h-title">검증 중</h1><p id="h-desc"></p><div class="chips" id="h-chips"></div></div>
+
+  <section class="box" id="manual">
+    <h2>URL 직접 붙여넣기</h2>
+    <textarea id="m-url" placeholder="https://bohemiansalt82.github.io/ntag424-dna/v/?p=...&m=..."></textarea>
+    <div class="btns"><button id="m-go">검증하기</button><button class="ghost" id="m-demo">NXP 예제 URL 넣기</button></div>
+  </section>
+
+  <div class="log" id="log">
+    <h2>개발자 로그 <button class="ghost" id="copy">JSON 복사</button></h2>
+    <div id="steps"></div>
+  </div>
+
+  <section class="box">
+    <details id="keybox">
+      <summary>키 설정 (이 기기에만 저장)</summary>
+      <label>키 방식</label>
+      <div class="seg">
+        <label><input type="radio" name="mode" value="master" checked> 마스터 키 (provision.py)</label>
+        <label><input type="radio" name="mode" value="raw"> K1·K2 직접 입력</label>
+      </div>
+      <div id="f-master"><label>마스터 키 (32자리 HEX, master.key 내용)</label><input type="text" id="k-master" autocomplete="off" spellcheck="false"></div>
+      <div id="f-raw" class="hidden">
+        <label>K1 · SDM 메타 읽기 키</label><input type="text" id="k-1" autocomplete="off" spellcheck="false">
+        <label>K2 · SDM 파일 읽기 키</label><input type="text" id="k-2" autocomplete="off" spellcheck="false">
+        <p class="hint">TagXplorer로 직접 설정한 칩 테스트용입니다. 공장 기본 키 그대로면 0을 32개 넣으세요.</p>
+      </div>
+      <div class="btns"><button id="k-save">저장하고 다시 검증</button><button class="ghost" id="k-clear">키 삭제</button><button class="ghost" id="c-clear">카운터 기록 초기화</button></div>
+      <p class="hint">테스트 전용 페이지입니다. 키가 이 폰의 브라우저에 저장되므로 실제 판매용 검증은 kit/server.py처럼 서버에서 해야 합니다.</p>
+    </details>
+  </section>
+</div>
+
+<script src="../js/ntag424.js"></script>
+<script>
+{
+const $ = id => document.getElementById(id);
+const LS = { get: k => { try { return localStorage.getItem(k); } catch { return null; } },
+             set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+             del: k => { try { localStorage.removeItem(k); } catch {} } };
+const isHex = (s, n) => new RegExp(`^[0-9A-Fa-f]{${n}}$`).test(s || "");
+const DEMO = "?p=EF963FF7828658A599F3041510671E88&m=94EED9EE65337086&demo=an12196";
+let lastTrace = null;
+
+function loadKeys(params) {
+  if (params.get("demo") === "an12196") return { keys: { mode: "raw", k1: new Uint8Array(16), k2: new Uint8Array(16) }, src: "NXP AN12196 예제 키 (모두 0)", skipCtr: true };
+  if (params.get("sim") === "1") {
+    const s = LS.get("ntag_sim_master");
+    if (isHex(s, 32)) return { keys: { mode: "master", master: unhex(s) }, src: "시뮬레이터 세션 키" };
+  }
+  const mode = LS.get("ntag_mode") || "master";
+  if (mode === "master" && isHex(LS.get("ntag_master"), 32)) return { keys: { mode, master: unhex(LS.get("ntag_master")) }, src: "저장된 마스터 키" };
+  if (mode === "raw" && isHex(LS.get("ntag_k1"), 32) && isHex(LS.get("ntag_k2"), 32))
+    return { keys: { mode, k1: unhex(LS.get("ntag_k1")), k2: unhex(LS.get("ntag_k2")) }, src: "저장된 K1·K2" };
+  return null;
+}
+
+function hero(kind, title, desc, chips = []) {
+  const icon = { genuine: "✓", replay: "!", forged: "✕", nokey: "🔑", empty: "?" }[kind];
+  $("hero").className = "hero " + kind;
+  $("h-badge").textContent = kind === "nokey" ? "K" : icon;
+  $("h-title").innerHTML = title; $("h-desc").innerHTML = desc;
+  $("h-chips").innerHTML = chips.map(c => `<span class="chip">${c}</span>`).join("");
+}
+
+function renderSteps(steps) {
+  $("steps").innerHTML = steps.map((s, i) => `
+    <div class="step">
+      <div class="t"><span class="n">${String(i + 1).padStart(2, "0")}</span><span>${s.title}</span>
+        <span class="s ${s.ok === true ? "ok" : s.ok === "warn" ? "warn" : "bad"}">${s.ok === true ? "✓" : s.ok === "warn" ? "!" : "✕"}</span></div>
+      ${s.rows.map(([k, v]) => `<div class="row"><span>${k}</span><code>${String(v).replace(/</g, "&lt;")}</code></div>`).join("")}
+      ${s.note ? `<div class="note">${s.note}</div>` : ""}
+    </div>`).join("");
+}
+
+async function run(search, ignoreCtr = false) {
+  const params = new URLSearchParams(search);
+  const p = (params.get("p") || "").trim(), m = (params.get("m") || "").trim();
+  if (!p && !m) {
+    hero("empty", "태그를 탭하거나<br>URL을 붙여넣으세요", "칩이 연 주소에 p와 m 값이 있어야 검증할 수 있습니다.");
+    $("log").classList.add("hidden"); return;
+  }
+  $("log").classList.remove("hidden"); $("manual").classList.add("hidden");
+  const k = loadKeys(params);
+  if (!k) {
+    hero("nokey", "키를 먼저<br>설정해 주세요", "아래 ‘키 설정’에 master.key 값을 넣으면 이 폰에서 바로 검증합니다.", [`p ${p.slice(0, 8)}…`, `m ${m.slice(0, 8)}…`]);
+    renderSteps([{ title: "검증 키 없음", ok: false, rows: [["p", p], ["m", m]], note: "이 페이지는 서버 없이 브라우저에서 검증하므로 키가 필요합니다." }]);
+    $("keybox").open = true; return;
+  }
+  const url = location.origin + location.pathname + "?" + params.toString();
+  const r = await verifyTrace(url, p, m, k.keys);
+  r.steps.splice(1, 0, { title: "검증 키 출처", ok: true, rows: [["키", k.src]] });
+
+  let status = r.status;
+  if (status === "genuine") {
+    const scope = hex(k.keys.mode === "master" ? k.keys.master : k.keys.k2).slice(0, 8);
+    const key = `ntag_ctr_${scope}_${r.uid}`, last = parseInt(LS.get(key) || "0", 10);
+    if (k.skipCtr) {
+      r.steps.push({ title: "카운터 재사용 검사", ok: "warn", rows: [["받은 카운터", r.ctr]], note: "NXP 예제는 고정 URL이라 재사용 검사를 건너뜁니다." });
+    } else if (r.ctr <= last && !ignoreCtr) {
+      status = "replay";
+      r.steps.push({ title: "카운터 재사용 검사 (이 기기 기록 기준)", ok: "warn", rows: [["받은 카운터", r.ctr], ["이 기기의 마지막 카운터", last], ["판정", `${r.ctr} ≤ ${last} → 이미 쓴 URL`]],
+        note: "서명은 맞지만 예전에 쓴 URL입니다. 운영 서버에서는 DB의 마지막 카운터로 같은 검사를 합니다." });
+    } else {
+      if (!ignoreCtr) LS.set(key, String(r.ctr));
+      r.steps.push({ title: "카운터 재사용 검사 (이 기기 기록 기준)", ok: true, rows: [["받은 카운터", r.ctr], ["이 기기의 마지막 카운터", last], ["판정", ignoreCtr ? "검사 생략 (다시 검증)" : `${r.ctr} > ${last} → 새 탭, 기록 갱신`]] });
+    }
+  }
+  r.steps.push({ title: "최종 결과", ok: status === "genuine" ? true : status === "replay" ? "warn" : false,
+    rows: [["status", status], ["UID", r.uid || "-"], ["카운터", r.ctr ?? "-"]] });
+
+  const chips = r.uid ? [`UID ${r.uid}`, `카운터 ${r.ctr}`] : [];
+  if (status === "genuine") hero("genuine", "정품 인증이<br>완료되었습니다", "칩 서명(AES-128 CMAC)이 확인되었습니다.", chips);
+  else if (status === "replay") hero("replay", "이미 사용된<br>인증 링크입니다", "서명은 맞지만 카운터가 증가하지 않았습니다. 태그를 다시 탭해 주세요.", chips);
+  else hero("forged", "정품으로 확인되지<br>않았습니다", "서명 검증에 실패했습니다. 아래 로그에서 실패한 단계를 확인하세요.", chips);
+  renderSteps(r.steps);
+  lastTrace = { status, uid: r.uid, ctr: r.ctr, p, m, steps: r.steps };
+}
+
+// 키 설정 폼
+const modeEls = document.querySelectorAll("input[name=mode]");
+const syncMode = () => { const v = document.querySelector("input[name=mode]:checked").value; $("f-master").classList.toggle("hidden", v !== "master"); $("f-raw").classList.toggle("hidden", v !== "raw"); };
+modeEls.forEach(el => el.onchange = syncMode);
+const savedMode = LS.get("ntag_mode") || "master";
+modeEls.forEach(el => el.checked = el.value === savedMode); syncMode();
+$("k-master").value = LS.get("ntag_master") || ""; $("k-1").value = LS.get("ntag_k1") || ""; $("k-2").value = LS.get("ntag_k2") || "";
+$("k-save").onclick = () => {
+  const mode = document.querySelector("input[name=mode]:checked").value;
+  const v = id => $(id).value.replace(/\s/g, "").toUpperCase();
+  if (mode === "master" && !isHex(v("k-master"), 32)) return alertBox("마스터 키는 32자리 HEX여야 합니다.");
+  if (mode === "raw" && (!isHex(v("k-1"), 32) || !isHex(v("k-2"), 32))) return alertBox("K1, K2는 각각 32자리 HEX여야 합니다.");
+  LS.set("ntag_mode", mode);
+  if (mode === "master") LS.set("ntag_master", v("k-master")); else { LS.set("ntag_k1", v("k-1")); LS.set("ntag_k2", v("k-2")); }
+  run(location.search, true);
+};
+$("k-clear").onclick = () => { ["ntag_master", "ntag_k1", "ntag_k2", "ntag_mode"].forEach(LS.del); $("k-master").value = $("k-1").value = $("k-2").value = ""; run(location.search); };
+$("c-clear").onclick = () => { try { Object.keys(localStorage).filter(k => k.startsWith("ntag_ctr_")).forEach(LS.del); } catch {} $("c-clear").textContent = "초기화됨"; };
+function alertBox(msg) { const h = document.querySelector("#keybox .hint"); h.textContent = msg; h.style.color = "var(--red)"; }
+
+$("m-demo").onclick = () => { $("m-url").value = location.origin + location.pathname + DEMO; };
+$("m-go").onclick = () => {
+  const t = $("m-url").value.trim(), q = t.includes("?") ? t.slice(t.indexOf("?")) : "";
+  history.replaceState(null, "", location.pathname + q); run(q);
+};
+$("copy").onclick = async () => {
+  try { await navigator.clipboard.writeText(JSON.stringify(lastTrace, null, 2)); $("copy").textContent = "복사됨"; } catch { $("copy").textContent = "복사 실패"; }
+};
+run(location.search);
+}
+</script>
+</body>
+</html>
